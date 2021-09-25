@@ -2,9 +2,11 @@ from obspython import (
     obs_properties_create,
     obs_properties_add_bool,
     obs_properties_add_font,
+    obs_properties_add_color,
     obs_data_get_string,
     obs_data_get_int,
     obs_data_get_obj,
+    obs_data_get_json,
     timer_add,
     timer_remove,
     obs_frontend_recording_active,
@@ -33,6 +35,11 @@ def set_font(font: "obs_data_t *") -> None:
         if font
         else QFont()
     )
+
+
+def set_color(r: int, g: int, b: int) -> None:
+    global window
+    window.setStyleSheet(f"color : rgb({r},{g},{b});")
 
 
 def get_status() -> str:
@@ -84,6 +91,7 @@ def script_description() -> str:
 def script_properties() -> "obs_properties_t *":
     props = obs_properties_create()
     obs_properties_add_font(props, "font", "Font")
+    obs_properties_add_color(props, "color", "Color")
     return props
 
 
@@ -111,6 +119,7 @@ def script_load(settings: "obs_data_t *") -> None:
 
 def script_update(settings: "obs_data_t *") -> None:
     set_font(obs_data_get_obj(settings, "font"))
+    set_color(*obs_data_get_int(settings, "color").to_bytes(4, byteorder="little")[0:3])
 
 
 def script_unload() -> None:
