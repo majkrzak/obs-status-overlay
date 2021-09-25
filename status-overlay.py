@@ -7,6 +7,9 @@ from obspython import (
     obs_data_get_int,
     obs_data_get_obj,
     obs_data_get_json,
+    obs_data_set_default_int,
+    obs_data_set_default_obj,
+    obs_data_create_from_json,
     timer_add,
     timer_remove,
     obs_frontend_recording_active,
@@ -18,11 +21,17 @@ from obspython import (
     obs_frontend_get_current_scene,
 )
 from math import ceil
+from json import dumps
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QFontDatabase
 
 window: QLabel
+
+
+def set_color(r: int, g: int, b: int) -> None:
+    global window
+    window.setStyleSheet(f"color : rgb({r},{g},{b});")
 
 
 def set_font(font: "obs_data_t *") -> None:
@@ -32,14 +41,7 @@ def set_font(font: "obs_data_t *") -> None:
             obs_data_get_string(font, "face"),
             obs_data_get_int(font, "size"),
         )
-        if font
-        else QFont()
     )
-
-
-def set_color(r: int, g: int, b: int) -> None:
-    global window
-    window.setStyleSheet(f"color : rgb({r},{g},{b});")
 
 
 def get_status() -> str:
@@ -90,13 +92,27 @@ def script_description() -> str:
 
 def script_properties() -> "obs_properties_t *":
     props = obs_properties_create()
-    obs_properties_add_font(props, "font", "Font")
     obs_properties_add_color(props, "color", "Color")
+    obs_properties_add_font(props, "font", "Font")
     return props
 
 
 def script_defaults(settings: "obs_data_t *") -> None:
-    pass
+    obs_data_set_default_int(settings, "color", 0xFF0000FF)
+    obs_data_set_default_obj(
+        settings,
+        "font",
+        obs_data_create_from_json(
+            dumps(
+                {
+                    "face": QFontDatabase.systemFont(QFontDatabase.FixedFont).family(),
+                    "size": 6,
+                    "flags": 0,
+                    "style": "Regular",
+                }
+            )
+        ),
+    )
 
 
 def script_load(settings: "obs_data_t *") -> None:
@@ -120,8 +136,8 @@ def script_load(settings: "obs_data_t *") -> None:
 
 
 def script_update(settings: "obs_data_t *") -> None:
-    set_font(obs_data_get_obj(settings, "font"))
     set_color(*obs_data_get_int(settings, "color").to_bytes(4, byteorder="little")[0:3])
+    set_font(obs_data_get_obj(settings, "font"))
 
 
 def script_unload() -> None:
