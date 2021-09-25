@@ -5,7 +5,11 @@ from obspython import (
     timer_remove,
     obs_frontend_recording_active,
     obs_frontend_streaming_active,
+    obs_frontend_get_streaming_output,
+    obs_output_get_total_frames,
+    obs_get_frame_interval_ns,
 )
+from math import ceil
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import Qt
 
@@ -21,9 +25,31 @@ def get_status() -> str:
     }[(obs_frontend_recording_active(), obs_frontend_streaming_active())]
 
 
+def get_live_timer() -> str:
+    t = (
+        ceil(
+            obs_output_get_total_frames(obs_frontend_get_streaming_output())
+            * obs_get_frame_interval_ns()
+            / 1000
+            / 1000
+            / 1000
+        )
+        if obs_frontend_streaming_active()
+        else 0
+    )
+    return f"{t//60//60:02d}:{t//60%60:02d}:{t%60:02d}"
+
+
 def update() -> None:
     global window
-    window.setText(f"{get_status()}")
+    window.setText(
+        " ".join(
+            [
+                get_status(),
+                get_live_timer(),
+            ]
+        )
+    )
     window.adjustSize()
 
 
