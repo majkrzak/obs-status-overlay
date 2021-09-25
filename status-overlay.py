@@ -8,6 +8,8 @@ from obspython import (
     obs_frontend_get_streaming_output,
     obs_output_get_total_frames,
     obs_get_frame_interval_ns,
+    obs_source_get_name,
+    obs_frontend_get_current_scene,
 )
 from math import ceil
 from PyQt5.QtWidgets import QLabel
@@ -40,6 +42,10 @@ def get_live_timer() -> str:
     return f"{t//60//60:02d}:{t//60%60:02d}:{t%60:02d}"
 
 
+def get_current_scene() -> str:
+    return obs_source_get_name(obs_frontend_get_current_scene())
+
+
 def update() -> None:
     global window
     window.setText(
@@ -47,6 +53,7 @@ def update() -> None:
             [
                 get_status(),
                 get_live_timer(),
+                get_current_scene(),
             ]
         )
     )
