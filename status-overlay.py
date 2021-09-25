@@ -1,6 +1,10 @@
 from obspython import (
     obs_properties_create,
     obs_properties_add_bool,
+    obs_properties_add_font,
+    obs_data_get_string,
+    obs_data_get_int,
+    obs_data_get_obj,
     timer_add,
     timer_remove,
     obs_frontend_recording_active,
@@ -14,8 +18,21 @@ from obspython import (
 from math import ceil
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont
 
 window: QLabel
+
+
+def set_font(font: "obs_data_t *") -> None:
+    global window
+    window.setFont(
+        QFont(
+            obs_data_get_string(font, "face"),
+            obs_data_get_int(font, "size"),
+        )
+        if font
+        else QFont()
+    )
 
 
 def get_status() -> str:
@@ -66,6 +83,7 @@ def script_description() -> str:
 
 def script_properties() -> "obs_properties_t *":
     props = obs_properties_create()
+    obs_properties_add_font(props, "font", "Font")
     return props
 
 
@@ -86,13 +104,13 @@ def script_load(settings: "obs_data_t *") -> None:
         | Qt.WindowTransparentForInput
     )
 
+    window.show()
+
     timer_add(update, 100)
 
 
 def script_update(settings: "obs_data_t *") -> None:
-    global window
-    window.hide()
-    window.show()
+    set_font(obs_data_get_obj(settings, "font"))
 
 
 def script_unload() -> None:
