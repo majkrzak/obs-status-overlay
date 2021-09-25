@@ -112,6 +112,8 @@ def script_load(settings: "obs_data_t *") -> None:
         | Qt.WindowTransparentForInput
     )
 
+    window.setAttribute(Qt.WA_TranslucentBackground)
+
     window.show()
 
     timer_add(update, 100)
