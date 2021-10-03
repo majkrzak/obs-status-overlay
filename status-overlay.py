@@ -144,8 +144,8 @@ config: Config = Config(
                     default=True,
                 ),
                 SimpleNamespace(
-                    code="show_droped_frames",
-                    name="Show Droped Frames",
+                    code="show_dropped_frames",
+                    name="Show Dropped Frames",
                     kind="bool",
                     default=True,
                 ),
@@ -206,10 +206,10 @@ def get_live_timer() -> str:
 def get_dropped_frames() -> str:
     streaming_output = obs_frontend_get_streaming_output()
     total_frames = obs_output_get_total_frames(streaming_output)
-    droped_frames = obs_output_get_frames_dropped(streaming_output)
-    droped_ratio = droped_frames / total_frames if total_frames else 0
+    dropped_frames = obs_output_get_frames_dropped(streaming_output)
+    dropped_ratio = dropped_frames / total_frames if total_frames else 0
 
-    return f"{droped_frames}({droped_ratio*100:.2f}%)"
+    return f"{dropped_frames}({dropped_ratio*100:.2f}%)"
 
 
 def get_current_scene() -> str:
@@ -224,7 +224,7 @@ def update() -> None:
                 [
                     get_status() if config.show_status else None,
                     get_live_timer() if config.show_timer else None,
-                    get_dropped_frames() if config.show_droped_frames else None,
+                    get_dropped_frames() if config.show_dropped_frames else None,
                     get_current_scene() if config.show_scene else None,
                 ],
             )
