@@ -21,6 +21,7 @@ from obspython import (
     obs_frontend_streaming_active,
     obs_frontend_get_streaming_output,
     obs_output_get_total_frames,
+    obs_output_get_frames_dropped,
     obs_get_frame_interval_ns,
     obs_source_get_name,
     obs_frontend_get_current_scene,
@@ -142,6 +143,12 @@ config: Config = Config(
                     kind="bool",
                     default=True,
                 ),
+                SimpleNamespace(
+                    code="show_droped_frames",
+                    name="Show Droped Frames",
+                    kind="bool",
+                    default=True,
+                ),
             ],
         ),
         SimpleNamespace(
@@ -196,6 +203,15 @@ def get_live_timer() -> str:
     return f"{t//60//60:02d}:{t//60%60:02d}:{t%60:02d}"
 
 
+def get_dropped_frames() -> str:
+    streaming_output = obs_frontend_get_streaming_output()
+    total_frames = obs_output_get_total_frames(streaming_output)
+    droped_frames = obs_output_get_frames_dropped(streaming_output)
+    droped_ratio = droped_frames / total_frames if total_frames else 0
+
+    return f"{droped_frames}({droped_ratio*100:.2f}%)"
+
+
 def get_current_scene() -> str:
     return obs_source_get_name(obs_frontend_get_current_scene())
 
@@ -208,6 +224,7 @@ def update() -> None:
                 [
                     get_status() if config.show_status else None,
                     get_live_timer() if config.show_timer else None,
+                    get_dropped_frames() if config.show_droped_frames else None,
                     get_current_scene() if config.show_scene else None,
                 ],
             )
