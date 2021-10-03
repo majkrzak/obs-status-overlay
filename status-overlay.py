@@ -3,11 +3,16 @@ from obspython import (
     obs_properties_add_bool,
     obs_properties_add_font,
     obs_properties_add_color,
+    obs_properties_add_group,
+    OBS_GROUP_NORMAL,
+    OBS_GROUP_CHECKABLE,
+    obs_data_get_bool,
     obs_data_get_string,
     obs_data_get_int,
     obs_data_get_obj,
     obs_data_get_json,
     obs_data_set_default_int,
+    obs_data_set_default_bool,
     obs_data_set_default_obj,
     obs_data_create_from_json,
     timer_add,
@@ -21,27 +26,150 @@ from obspython import (
     obs_frontend_get_current_scene,
 )
 from math import ceil
-from json import dumps
+from json import dumps, loads
+from types import SimpleNamespace
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QFontDatabase
 
+
+class Config:
+
+    schema: list
+
+    def __init__(self, schema: list):
+        self.schema = schema
+
+    def get_properties(self) -> "obs_properties_t *":
+        props = obs_properties_create()
+        for group in self.schema:
+            group_props = obs_properties_create()
+            for property in group.children:
+                {
+                    "bool": obs_properties_add_bool,
+                    "color": obs_properties_add_color,
+                    "font": obs_properties_add_font,
+                }[property.kind](group_props, property.code, property.name)
+            obs_properties_add_group(
+                props,
+                group.code,
+                group.name,
+                {"bool": OBS_GROUP_CHECKABLE, None: OBS_GROUP_NORMAL}[group.kind],
+                group_props,
+            )
+        return props
+
+    def set_defaults(self, settings: "obs_data_t *") -> None:
+        for group in self.schema:
+            if group.kind == "bool":
+                obs_data_set_default_bool(settings, group.code, group.default)
+            for property in group.children:
+                if property.kind == "bool":
+                    obs_data_set_default_bool(settings, property.code, property.default)
+                elif property.kind == "color":
+                    obs_data_set_default_int(
+                        settings,
+                        property.code,
+                        int.from_bytes(property.default, byteorder="little"),
+                    )
+                elif property.kind == "font":
+                    obs_data_set_default_obj(
+                        settings,
+                        property.code,
+                        obs_data_create_from_json(dumps(property.default.__dict__)),
+                    )
+                else:
+                    raise NotImplementedError()
+
+    def load(self, settings: "obs_data_t *") -> None:
+        for group in self.schema:
+            if group.kind == "bool":
+                setattr(self, group.code, obs_data_get_bool(settings, group.code))
+            for property in group.children:
+                if property.kind == "bool":
+                    setattr(
+                        self, property.code, obs_data_get_bool(settings, property.code)
+                    )
+                elif property.kind == "color":
+                    setattr(
+                        self,
+                        property.code,
+                        tuple(
+                            obs_data_get_int(settings, property.code).to_bytes(
+                                4, byteorder="little"
+                            )
+                        ),
+                    )
+                elif property.kind == "font":
+                    setattr(
+                        self,
+                        property.code,
+                        loads(
+                            obs_data_get_json(
+                                obs_data_get_obj(settings, property.code)
+                            ),
+                            object_hook=lambda d: SimpleNamespace(**d),
+                        ),
+                    )
+                else:
+                    raise NotImplementedError()
+
+
 window: QLabel
-
-
-def set_color(r: int, g: int, b: int) -> None:
-    global window
-    window.setStyleSheet(f"color : rgb({r},{g},{b});")
-
-
-def set_font(font: "obs_data_t *") -> None:
-    global window
-    window.setFont(
-        QFont(
-            obs_data_get_string(font, "face"),
-            obs_data_get_int(font, "size"),
-        )
-    )
+config: Config = Config(
+    [
+        SimpleNamespace(
+            code="show",
+            name="Show",
+            kind="bool",
+            default=True,
+            children=[
+                SimpleNamespace(
+                    code="show_status",
+                    name="Show Status",
+                    kind="bool",
+                    default=True,
+                ),
+                SimpleNamespace(
+                    code="show_timer",
+                    name="Show Timer",
+                    kind="bool",
+                    default=True,
+                ),
+                SimpleNamespace(
+                    code="show_scene",
+                    name="Show Scene",
+                    kind="bool",
+                    default=True,
+                ),
+            ],
+        ),
+        SimpleNamespace(
+            code="style",
+            name="Style",
+            kind=None,
+            children=[
+                SimpleNamespace(
+                    code="color",
+                    name="Color",
+                    kind="color",
+                    default=(255, 0, 0, 255),
+                ),
+                SimpleNamespace(
+                    code="font",
+                    name="Font",
+                    kind="font",
+                    default=SimpleNamespace(
+                        face=QFontDatabase.systemFont(QFontDatabase.FixedFont).family(),
+                        size=6,
+                        flags=0,
+                        style="Regular",
+                    ),
+                ),
+            ],
+        ),
+    ]
+)
 
 
 def get_status() -> str:
@@ -73,14 +201,16 @@ def get_current_scene() -> str:
 
 
 def update() -> None:
-    global window
     window.setText(
         " ".join(
-            [
-                get_status(),
-                get_live_timer(),
-                get_current_scene(),
-            ]
+            filter(
+                lambda x: x,
+                [
+                    get_status() if config.show_status else None,
+                    get_live_timer() if config.show_timer else None,
+                    get_current_scene() if config.show_scene else None,
+                ],
+            )
         )
     )
     window.adjustSize()
@@ -91,28 +221,11 @@ def script_description() -> str:
 
 
 def script_properties() -> "obs_properties_t *":
-    props = obs_properties_create()
-    obs_properties_add_color(props, "color", "Color")
-    obs_properties_add_font(props, "font", "Font")
-    return props
+    return config.get_properties()
 
 
 def script_defaults(settings: "obs_data_t *") -> None:
-    obs_data_set_default_int(settings, "color", 0xFF0000FF)
-    obs_data_set_default_obj(
-        settings,
-        "font",
-        obs_data_create_from_json(
-            dumps(
-                {
-                    "face": QFontDatabase.systemFont(QFontDatabase.FixedFont).family(),
-                    "size": 6,
-                    "flags": 0,
-                    "style": "Regular",
-                }
-            )
-        ),
-    )
+    config.set_defaults(settings)
 
 
 def script_load(settings: "obs_data_t *") -> None:
@@ -136,11 +249,24 @@ def script_load(settings: "obs_data_t *") -> None:
 
 
 def script_update(settings: "obs_data_t *") -> None:
-    set_color(*obs_data_get_int(settings, "color").to_bytes(4, byteorder="little")[0:3])
-    set_font(obs_data_get_obj(settings, "font"))
+    config.load(settings)
+
+    window.setStyleSheet(
+        "".join(
+            [
+                f"color: rgb({config.color[0]},{config.color[1]},{config.color[2]});",
+                f"font-family: {config.font.face};",
+                f"font-size: {config.font.size}pt;",
+            ]
+        )
+    )
+
+    if config.show:
+        window.show()
+    else:
+        window.hide()
 
 
 def script_unload() -> None:
-    global window
     timer_remove(update)
     window.destroy()
