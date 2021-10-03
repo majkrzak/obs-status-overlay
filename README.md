@@ -30,4 +30,4 @@ This is the very initial version of this script. Therefore, I wrote in in a way 
 
 Feel free to contribute by reporting the issues or dropping suggestions of the new features. Pull requests will of course be appreciated.
 
-Currently, [https://black.readthedocs.io](Black) with default configuration is used to maintain the propper code style. Please run it before submitting the pull request.
+Currently, [Black](https://black.readthedocs.io) with default configuration is used to maintain the proper code style. Please run it before submitting the pull request.
