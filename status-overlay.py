@@ -29,9 +29,9 @@ from obspython import (
 from math import ceil
 from json import dumps, loads
 from types import SimpleNamespace
-from PyQt5.QtWidgets import QLabel
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont, QFontDatabase
+from PyQt6.QtWidgets import QLabel
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont, QFontDatabase
 
 
 class Config:
@@ -167,7 +167,9 @@ config: Config = Config(
                     name="Font",
                     kind="font",
                     default=SimpleNamespace(
-                        face=QFontDatabase.systemFont(QFontDatabase.FixedFont).family(),
+                        face=QFontDatabase.systemFont(
+                            QFontDatabase.SystemFont.FixedFont
+                        ).family(),
                         size=6,
                         flags=0,
                         style="Regular",
@@ -250,15 +252,15 @@ def script_load(settings: "obs_data_t *") -> None:
     window = QLabel()
 
     window.setWindowFlags(
-        Qt.Window
-        | Qt.WindowStaysOnTopHint
-        | Qt.FramelessWindowHint
-        | Qt.BypassWindowManagerHint
-        | Qt.WindowDoesNotAcceptFocus
-        | Qt.WindowTransparentForInput
+        Qt.WindowType.Window
+        | Qt.WindowType.WindowStaysOnTopHint
+        | Qt.WindowType.FramelessWindowHint
+        | Qt.WindowType.BypassWindowManagerHint
+        | Qt.WindowType.WindowDoesNotAcceptFocus
+        | Qt.WindowType.WindowTransparentForInput
     )
 
-    window.setAttribute(Qt.WA_TranslucentBackground)
+    window.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
     window.show()
 
